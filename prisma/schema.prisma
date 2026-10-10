@@ -1,0 +1,94 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                    String        @id @default(auto()) @map("_id") @db.ObjectId
+  email                 String        @unique
+  name                  String
+  targetYear            String        @default("2025")
+  optionalSubject       String?
+  isGuest               Boolean       @default(false)
+  freeTestsRemaining    Int           @default(5)
+  isSubscribed          Boolean       @default(false)
+  subscriptionExpiresAt DateTime?
+  planType              String?       @default("free") // "free" | "prelims_2027"
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  bookmarks             Bookmark[]
+  attempts              TestAttempt[]
+}
+
+model Article {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  slugId                String   @unique
+  title                 String
+  ministry              String
+  date                  String
+  pibId                 String
+  gsPaper               String
+  topic                 String
+  prelimsImportance     Int      @default(5)
+  tags                  String[]
+  summaryBullets        String[]
+  statutoryOrConstitutional String?
+  nodalMinistryOrAgency String?
+  fundingPattern        String?
+  objectives            String[]
+  eligibleBeneficiaries String?
+  keyPointers           String[]
+  pyqYear               String?
+  pyqTopic              String?
+  staticBookReference   String?
+  staticChapterTopic    String?
+  staticWhatToRead      String?
+  staticCoreArticlesOrActs String[]
+  syllabusSubject       String?
+  syllabusArticleOrAct  String?
+  syllabusRelatedConcepts String[]
+  prelimsTrapAlert      String
+  fullContent           String?
+  officialUrl           String?
+  createdAt             DateTime @default(now())
+}
+
+model Bookmark {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  articleId  String
+  status     String   @default("pending") // "pending" | "mastered"
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MockTest {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  title            String
+  description      String
+  sourceArticleIds String[]
+  durationMinutes  Int      @default(15)
+  totalMarks       Int      @default(10)
+  createdAt        DateTime @default(now())
+}
+
+model TestAttempt {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String?  @db.ObjectId
+  testId           String
+  testTitle        String
+  timestamp        DateTime @default(now())
+  timeTakenSeconds Int
+  score            Float
+  maxScore         Float
+  correctCount     Int
+  incorrectCount   Int
+  unattemptedCount Int
+  accuracy         Float
+  userAnswers      String
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

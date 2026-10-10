@@ -3,24 +3,46 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+"dev": "node --dns-result-order=ipv4first ./node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "clean": "rm -rf .next node_modules",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "fetch-articles": "tsx scripts/fetchArticles.ts",
+    "cron:start": "tsx scripts/fetchArticles.ts start",
+    "articles:check": "tsx scripts/fetchArticles.ts check",
+    "articles:run": "tsx scripts/fetchArticles.ts run",
+    "articles:dry-run": "tsx scripts/fetchArticles.ts dry-run",
+    "articles:status": "tsx scripts/fetchArticles.ts status"
   },
   "dependencies": {
-    "next": "16.4.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "@google/genai": "^2.4.0",
+    "@prisma/client": "^6.19.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "next": "^15.0.0",
+    "node-cron": "^3.0.3",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.0",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@types/node": "^22.14.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.5.29",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.7.2"
   }
 }
