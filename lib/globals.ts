@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { initialPIBArticles } from '@/data/pibArticles';
 import { initialMockQuestions, initialMockTests } from '@/data/mockQuestions';
 import { PIBArticle, MockQuestion, MockTest, TestAttempt, User, RevisionItem } from '@/types';
-import { connectPrisma, prisma } from './prisma';
+import { prisma } from './prisma';
 
 // AI Initialization
 export const ai = process.env.GEMINI_API_KEY
@@ -112,7 +112,6 @@ export async function loadArticlesFromDB(): Promise<boolean> {
     throw new Error('DATABASE_URL is not configured');
   }
 
-  await connectPrisma();
   const dbArticles = await prisma.article.findMany({
     orderBy: { createdAt: 'desc' },
     take: 100,

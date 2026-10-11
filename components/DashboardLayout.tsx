@@ -273,8 +273,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               onClick={onNavigateToPricing}
               className={`w-full text-left p-3 rounded-xl border transition-all ${
                 user?.isSubscribed
-                  ? 'bg-gray-100 border-gray-300 text-black'
-                  : 'bg-white hover:bg-gray-50 border-gray-300 hover:border-black text-black'
+                  ? 'bg-lime-300 border-gray-300 text-black'
+                  : 'bg-lime-500 hover:bg-gray-50 border-gray-300 hover:border-black text-black'
               }`}
             >
               <div className="flex items-center justify-between mb-1">

@@ -38,6 +38,11 @@ export class ArticleProcessor {
         console.log(`Processing article: ${article.title}`);
 
         const analysis = await this.analyzeArticle(article);
+
+        if (analysis.isUPSCRelevant === false) {
+          console.log(`[AI Filter] Skipped "${article.title}": ${analysis.rejectionReason}`);
+          return null; 
+        }
         const processed = this.formatToPIBArticle(article, analysis);
 
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -79,11 +84,11 @@ export class ArticleProcessor {
     try {
       const result = await Promise.race([
         ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-2.5-flash',
           contents: prompt,
         }),
         new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Gemini analysis timed out after 30 seconds')), 30000);
+          setTimeout(() => reject(new Error('Gemini analysis timed out after 60 seconds')), 60000);
         }),
       ]);
 
@@ -111,6 +116,11 @@ Summary: ${article.summary}
 ${article.fullContent ? `Content: ${article.fullContent.substring(0, 2000)}` : ''}
 
 ANALYZE THIS ARTICLE AND PROVIDE THE FOLLOWING:
+
+0. **UPSC Relevance Triage**:
+   - Assess if this is genuinely useful for UPSC Prelims or Mains.
+   - If the article is just a routine administrative meeting, festival greeting, condolence message, pure political rhetoric, or generic speech without policy substance, mark isUPSCRelevant as false.
+   - Only mark true if it discusses new schemes, cabinet decisions, scientific advancements, economic data, treaties, or constitutional matters.
 
 1. **UPSC GS Paper Relevance** (Choose ONE):
    - GS-1 (Indian Heritage & Culture, History & Geography of the World & Society)
@@ -207,6 +217,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text.`;
       
       // Validate and transform to our interface
       return {
+        isUPSCRelevant: parsed.isUPSCRelevant ?? true, // Default to true if missing
+        rejectionReason: parsed.rejectionReason || 'No reason provided',
         gsPaper: this.validateGSPaper(parsed.gsPaper),
         topic: parsed.topic || 'General Studies',
         prelimsImportance: this.validateImportanceScore(parsed.prelimsImportance),
@@ -363,6 +375,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text.`;
 }
 
 interface AIArticleAnalysis {
+  isUPSCRelevant: boolean;      // ADD THIS
+  rejectionReason?: string;     // ADD THIS
   gsPaper: GSPaper;
   topic: string;
   prelimsImportance: 1 | 2 | 3 | 4 | 5;

@@ -1,5 +1,5 @@
 // Import the global instance, NOT PrismaClient directly
-import { connectPrisma, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { PIBArticle } from '@/types';
 
 export class DatabaseService {
@@ -10,7 +10,6 @@ export class DatabaseService {
    * Save or update articles in the database
    */
   async saveArticles(articles: Partial<PIBArticle>[]): Promise<{ saved: number; updated: number; skipped: number }> {
-    await connectPrisma();
     let saved = 0;
     let updated = 0;
     let skipped = 0;
@@ -62,7 +61,6 @@ export class DatabaseService {
    * Get all existing PIB IDs from database
    */
   async getExistingPIBIds(): Promise<string[]> {
-    await connectPrisma();
     const articles = await prisma.article.findMany({
       select: { pibId: true }
     });
@@ -81,7 +79,6 @@ export class DatabaseService {
    * Get count of articles in database
    */
   async getArticleCount(): Promise<number> {
-    await connectPrisma();
     return prisma.article.count();
   }
 
