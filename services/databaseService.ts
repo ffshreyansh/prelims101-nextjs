@@ -1,5 +1,6 @@
 // Import the global instance, NOT PrismaClient directly
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { PIBArticle } from '@/types';
 
 export class DatabaseService {
@@ -53,8 +54,82 @@ export class DatabaseService {
     return { saved, updated, skipped };
   }
 
-  private mapToPrismaModel(article: Partial<PIBArticle>, isNew: boolean): any {
-    // ... (Keep this exact code the same as you provided) ...
+  private mapToPrismaModel(
+    article: Partial<PIBArticle>,
+    isNew: true,
+  ): Prisma.ArticleUncheckedCreateInput;
+  private mapToPrismaModel(
+    article: Partial<PIBArticle>,
+    isNew: false,
+  ): Prisma.ArticleUncheckedUpdateInput;
+  private mapToPrismaModel(
+    article: Partial<PIBArticle>,
+    isNew: boolean,
+  ): Prisma.ArticleUncheckedCreateInput | Prisma.ArticleUncheckedUpdateInput {
+    const {
+      pibId,
+      title,
+      ministry,
+      date,
+      gsPaper,
+      topic,
+      prelimsTrapAlert,
+    } = article;
+
+    if (
+      !pibId ||
+      !title ||
+      !ministry ||
+      !date ||
+      !gsPaper ||
+      !topic ||
+      !prelimsTrapAlert
+    ) {
+      throw new Error(
+        `Cannot save article${title ? ` "${title}"` : ''}: missing a required field (pibId, title, ministry, date, gsPaper, topic, or prelimsTrapAlert)`,
+      );
+    }
+
+    const articleData: Prisma.ArticleUncheckedCreateInput = {
+      slugId: pibId,
+      title,
+      ministry,
+      date,
+      pibId,
+      gsPaper,
+      topic,
+      prelimsImportance: article.prelimsImportance ?? 3,
+      tags: article.tags ?? [],
+      summaryBullets: article.summaryBullets ?? [],
+      statutoryOrConstitutional:
+        article.keyTakeaways?.statutoryOrConstitutional ?? null,
+      nodalMinistryOrAgency:
+        article.keyTakeaways?.nodalMinistryOrAgency ?? null,
+      fundingPattern: article.keyTakeaways?.fundingPattern ?? null,
+      objectives: article.keyTakeaways?.objectives ?? [],
+      eligibleBeneficiaries:
+        article.keyTakeaways?.eligibleBeneficiaries ?? null,
+      keyPointers: article.keyTakeaways?.keyPointers ?? [],
+      pyqYear: article.pyqYear ?? null,
+      pyqTopic: article.pyqContext ?? null,
+      staticBookReference: article.staticStudyBox?.standardBook ?? null,
+      staticChapterTopic: article.staticStudyBox?.chapterTopic ?? null,
+      staticWhatToRead: article.staticStudyBox?.whatToRead ?? null,
+      staticCoreArticlesOrActs:
+        article.staticStudyBox?.coreArticlesOrActs ?? [],
+      syllabusSubject: article.staticSyllabusLinkage?.subject ?? null,
+      syllabusArticleOrAct:
+        article.staticSyllabusLinkage?.articleOrAct ?? null,
+      syllabusRelatedConcepts:
+        article.staticSyllabusLinkage?.relatedConcepts ?? [],
+      prelimsTrapAlert,
+      fullContent: article.fullContent ?? null,
+      officialUrl: article.officialUrl ?? null,
+    };
+
+    if (isNew) return articleData;
+    const { slugId: _slugId, ...updateData } = articleData;
+    return updateData;
   }
 
   /**
@@ -70,7 +145,7 @@ export class DatabaseService {
   /**
    * Filter out articles that already exist in database
    */
-  async filterNewArticles(scrapedArticles: Array<{ pibId: string }>): Promise<Array<{ pibId: string }>> {
+  async filterNewArticles<T extends { pibId: string }>(scrapedArticles: T[]): Promise<T[]> {
     const existingIds = await this.getExistingPIBIds();
     return scrapedArticles.filter(article => !existingIds.includes(article.pibId));
   }

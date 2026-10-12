@@ -10,22 +10,6 @@ import { ArticleProcessor } from "@/services/articleProcessor";
 import { PIBArticle } from "@/types"; // Ensure this path matches your types file
 import type { DatabaseService as DatabaseServiceType } from "@/services/databaseService";
 
-const JUNK_KEYWORDS = [
-  "condoles",
-  "grief",
-  "passes away",
-  "greets",
-  "wishes",
-  "festival",
-  "pays floral tribute",
-  "inaugurates building",
-  "tournament",
-  "sports",
-  "medal",
-  "bids farewell",
-  "photo opportunity",
-];
-
 export async function POST(req: NextRequest) {
   if (!isAiConfigured()) {
     return NextResponse.json(
@@ -68,29 +52,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let newScraped = scrapedArticles;
+    const newScraped = await dbService.filterNewArticles(scrapedArticles);
+    const duplicates = scrapedArticles.length - newScraped.length;
+    console.log(
+      `[PIB Fetch] Candidate selection: scraped=${scrapedArticles.length}, duplicates=${duplicates}, sentToAI=${newScraped.length}`,
+    );
 
-    if (dbService) {
-      newScraped = await dbService.filterNewArticles(scrapedArticles);
-      newScraped = newScraped.filter((article: any) => {
-        const hasHindi = /[\u0900-\u097F]/.test(article.title);
-        if (hasHindi) return false;
-        const lowerTitle = article.title.toLowerCase();
-        // Keep the article ONLY if it doesn't contain any junk keywords
-        return !JUNK_KEYWORDS.some((keyword) => lowerTitle.includes(keyword));
+    if (newScraped.length === 0) {
+      await dbService.disconnect();
+      return NextResponse.json({
+        success: true,
+        message: "No new articles found; all scraped releases already exist in the database.",
+        stats: {
+          scraped: scrapedArticles.length,
+          new: 0,
+          processed: 0,
+          saved: 0,
+          updated: 0,
+          skipped: duplicates,
+        },
       });
-
-      if (newScraped.length === 0) {
-        if (dbService?.disconnect) await dbService.disconnect();
-        return NextResponse.json({
-          success: true,
-          message: "No new UPSC-relevant articles found (all were either duplicates or filtered as junk).",
-          stats: {
-            scraped: scrapedArticles.length,
-            new: 0, processed: 0, saved: 0, updated: 0, skipped: scrapedArticles.length,
-          },
-        });
-      }
     }
 
     for (let i = 0; i < newScraped.length; i++) {
@@ -105,7 +86,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const processedResults = await processor.processArticles(newScraped as any);
+    const processedResults = await processor.processArticles(newScraped);
 
     let saveResult = { saved: 0, updated: 0, skipped: 0 };
     if (dbService) {

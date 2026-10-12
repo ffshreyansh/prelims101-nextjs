@@ -6,6 +6,7 @@ export interface ProcessedArticle {
   scrapedArticle: PIBScrapedArticle;
   processedArticle: Partial<PIBArticle>;
 }
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class ArticleProcessor {
   private ai: GoogleGenAI | null = null;
@@ -39,13 +40,20 @@ export class ArticleProcessor {
 
         const analysis = await this.analyzeArticle(article);
 
-        if (analysis.isUPSCRelevant === false) {
+        const institutionalMilestone = this.isInstitutionalMilestone(article);
+        if (analysis.isUPSCRelevant === false && !institutionalMilestone) {
           console.log(`[AI Filter] Skipped "${article.title}": ${analysis.rejectionReason}`);
           return null; 
+        }
+        if (analysis.isUPSCRelevant === false) {
+          console.log(
+            `[AI Filter] Keeping "${article.title}" because it covers a major institution's foundation or anniversary.`,
+          );
         }
         const processed = this.formatToPIBArticle(article, analysis);
 
         await new Promise(resolve => setTimeout(resolve, 1000));
+        
         return { scrapedArticle: article, processedArticle: processed };
       } catch (error) {
         console.error(`Error processing article "${article.title}":`, error);
@@ -66,6 +74,12 @@ export class ArticleProcessor {
       processedArticles.push(
         ...batch.filter((result): result is ProcessedArticle => result !== null)
       );
+      
+      // If there are more articles left to process, wait before the next batch
+      if (index + 3 < articles.length) {
+        console.log('Waiting 45 seconds to reset the 5 RPM limit...');
+        await delay(45000); // Wait 45 seconds so you average ~4 requests/min
+      }
     }
 
     return processedArticles;
@@ -84,7 +98,7 @@ export class ArticleProcessor {
     try {
       const result = await Promise.race([
         ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.8-flash',
           contents: prompt,
         }),
         new Promise<never>((_, reject) => {
@@ -120,7 +134,9 @@ ANALYZE THIS ARTICLE AND PROVIDE THE FOLLOWING:
 0. **UPSC Relevance Triage**:
    - Assess if this is genuinely useful for UPSC Prelims or Mains.
    - If the article is just a routine administrative meeting, festival greeting, condolence message, pure political rhetoric, or generic speech without policy substance, mark isUPSCRelevant as false.
-   - Only mark true if it discusses new schemes, cabinet decisions, scientific advancements, economic data, treaties, or constitutional matters.
+   - Mark articles about the foundation day, anniversary, mandate, powers, composition, or functioning of important constitutional or statutory institutions as relevant, even if the release is framed as a celebration or event report. This includes bodies such as NHRC, Election Commission, CAG, UPSC, Finance Commission, CIC, CVC, NCSC, NCST, NCW, Lokpal, NGT, and similar UPSC-relevant institutions.
+   - For an institutional milestone, prioritize exam-useful static facts about the institution: establishing law/year, constitutional or statutory status, composition and appointment, tenure, mandate/functions, powers and limitations, reporting, and relevant international standards. Include only facts you can state accurately; distinguish established facts from details not provided in the release and do not invent current officeholders or figures.
+   - Also mark relevant articles about new schemes, cabinet decisions, scientific advancements, economic data, treaties, or constitutional matters.
 
 1. **UPSC GS Paper Relevance** (Choose ONE):
    - GS-1 (Indian Heritage & Culture, History & Geography of the World & Society)
@@ -169,6 +185,8 @@ ANALYZE THIS ARTICLE AND PROVIDE THE FOLLOWING:
 FORMAT YOUR RESPONSE AS VALID JSON:
 
 {
+  "isUPSCRelevant": true,
+  "rejectionReason": "string or null",
   "gsPaper": "GS-1" | "GS-2" | "GS-3" | "Current Events",
   "topic": "string",
   "prelimsImportance": 1-5,
@@ -321,11 +339,27 @@ IMPORTANT: Return ONLY the JSON object, no additional text.`;
     return validScore as 1 | 2 | 3 | 4 | 5;
   }
 
+  private isInstitutionalMilestone(article: PIBScrapedArticle): boolean {
+    const title = article.title;
+    const isMilestone =
+      /\b(?:foundation\s+day|foundation\s+anniversary|(?:\d{1,3}(?:st|nd|rd|th)\s+)?anniversary|years?\s+of\s+(?:service|establishment|existence))\b/i.test(
+        title,
+      );
+    const isMajorInstitution =
+      /\b(?:NHRC|National Human Rights Commission|Election Commission(?: of India)?|CAG|Comptroller and Auditor General|UPSC|Union Public Service Commission|Finance Commission|Central Information Commission|CIC|Central Vigilance Commission|CVC|National Commission for Scheduled Castes|NCSC|National Commission for Scheduled Tribes|NCST|National Commission for Women|NCW|Lokpal|National Green Tribunal|NGT|NITI Aayog|Reserve Bank of India|RBI|Securities and Exchange Board of India|SEBI|Telecom Regulatory Authority of India|TRAI)\b/i.test(
+        title,
+      );
+
+    return isMilestone && isMajorInstitution;
+  }
+
   /**
    * Get default analysis for error cases
    */
   private getDefaultAnalysis(): AIArticleAnalysis {
     return {
+      isUPSCRelevant: true,
+      rejectionReason: 'AI analysis unavailable; retaining the source article for review.',
       gsPaper: 'Current Events',
       topic: 'General Studies',
       prelimsImportance: 3,

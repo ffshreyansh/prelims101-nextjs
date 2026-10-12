@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const prompt = `You are the UPSC Civil Services Examination Paper Setter... [TRUNCATED FOR BREVITY] Context: ${JSON.stringify(articlesContext)}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' },
     });
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       test: newTest,
       freeTestsRemaining: user.freeTestsRemaining,
       isSubscribed: user.isSubscribed,
-      generatedBy: 'gemini-2.5-flash',
+      generatedBy: 'gemini-3.8-flash',
     });
 
   } catch (error) {

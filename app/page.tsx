@@ -122,6 +122,8 @@ export default function Home() {
         const hash = window.location.hash.replace('#', '') as DashboardSection;
         if (hash && ['feed', 'pyq', 'tests', 'revision', 'analytics'].includes(hash)) {
           setCurrentSection(hash);
+        } else {
+          setCurrentSection('feed');
         }
       } else {
         setCurrentRoute('landing');
@@ -221,13 +223,13 @@ export default function Home() {
   }, []);
 
   // Routing Handlers
-  // const handleNavigateToSection = (section: DashboardSection) => {
-  //   setCurrentSection(section);
-  //   setCurrentRoute('dashboard');
-  //   if (typeof window !== 'undefined') {
-  //     window.history.pushState({}, '', `/dashboard#${section}`);
-  //   }
-  // };
+  const handleNavigateToSection = (section: DashboardSection) => {
+    setCurrentSection(section);
+    setCurrentRoute('dashboard');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', `/dashboard#${section}`);
+    }
+  };
 
   const handleNavigateToPricing = () => {
     setCurrentRoute('pricing');
@@ -520,7 +522,7 @@ export default function Home() {
       */}
       {currentRoute === 'landing' ? (
         <LandingPage
-          // onNavigateToSection={handleNavigateToSection}
+          onNavigateToSection={handleNavigateToSection}
           onNavigateToPricing={handleNavigateToPricing}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           isAuthenticated={!!user}
